@@ -125,6 +125,42 @@ def get_configuration_features(configuration: Configuration,
     """
     # TODO(Students) Start
 
+    features = []
+    pos_features = []
+    label_features = []
+
+    top3Stack = [configuration.get_stack(i) for i in range(3)]
+    top3Buffer = [configuration.get_buffer(i) for i in range(3)]
+
+    for token_index in top3Stack + top3Buffer:
+        features.append(vocabulary.get_word_id(configuration.get_word(token_index)))
+        pos_features.append(vocabulary.get_pos_id(configuration.get_pos(token_index)))
+
+    for token_index in top3Stack[:2]:
+        for i in range(1, 3):
+            ith_left_child = configuration.get_left_child(token_index, i)
+            features.append(vocabulary.get_word_id(configuration.get_word(ith_left_child)))
+            pos_features.append(vocabulary.get_pos_id(configuration.get_pos(ith_left_child)))
+            label_features.append(vocabulary.get_label_id(configuration.get_label(ith_left_child)))
+
+            ith_right_child = configuration.get_right_child(token_index, i)
+            features.append(vocabulary.get_word_id(configuration.get_word(ith_right_child)))
+            pos_features.append(vocabulary.get_pos_id(configuration.get_pos(ith_right_child)))
+            label_features.append(vocabulary.get_label_id(configuration.get_label(ith_right_child)))
+
+    for token_index in top3Stack[:2]:
+        left_left_child = configuration.get_left_child(configuration.get_left_child(token_index, 1), 1)
+        features.append(vocabulary.get_word_id(configuration.get_word(left_left_child)))
+        pos_features.append(vocabulary.get_pos_id(configuration.get_pos(left_left_child)))
+        label_features.append(vocabulary.get_label_id(configuration.get_label(left_left_child)))
+
+        right_right_child = configuration.get_right_child(configuration.get_right_child(token_index, 1), 1)
+        features.append(vocabulary.get_word_id(configuration.get_word(right_right_child)))
+        pos_features.append(vocabulary.get_pos_id(configuration.get_pos(right_right_child)))
+        label_features.append(vocabulary.get_label_id(configuration.get_label(right_right_child)))
+
+    features += pos_features + label_features
+
     # TODO(Students) End
 
     assert len(features) == 48
