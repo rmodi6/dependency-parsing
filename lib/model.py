@@ -24,7 +24,10 @@ class CubicActivation(layers.Layer):
         """
         # TODO(Students) Start
         # Comment the next line after implementing call.
-        raise NotImplementedError
+        # raise NotImplementedError
+
+        return tf.math.pow(vector, 3)
+
         # TODO(Students) End
 
 
@@ -83,6 +86,21 @@ class DependencyParser(models.Model):
         # Trainable Variables
         # TODO(Students) Start
 
+        w_init = tf.random_normal_initializer()
+        self.embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim), dtype='float32'),
+                                      trainable=trainable_embeddings)
+        self.pos_embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim), dtype='float32'),
+                                          trainable=trainable_embeddings)
+        self.label_embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim), dtype='float32'),
+                                            trainable=trainable_embeddings)
+        self.W1 = tf.Variable(initial_value=w_init(shape=(hidden_dim, embedding_dim * num_tokens), dtype='float32'),
+                              trainable=trainable_embeddings)
+        self.W2 = tf.Variable(initial_value=w_init(shape=(num_transitions, hidden_dim), dtype='float32'),
+                              trainable=trainable_embeddings)
+        b_init = tf.zeros_initializer()
+        self.B1 = tf.Variable(initial_value=b_init(shape=(hidden_dim,), dtype='float32'),
+                              trainable=trainable_embeddings)
+
         # TODO(Students) End
 
     def call(self,
@@ -116,6 +134,14 @@ class DependencyParser(models.Model):
         """
         # TODO(Students) Start
 
+        input_embed = tf.nn.embedding_lookup()
+
+        h = tf.matmul(input_embed, self.W1, transpose_b=True) + self.B1
+
+        h = self._activation(h)
+
+        logits = tf.matmul(h, self.W2, transpose_b=True)
+
         # TODO(Students) End
         output_dict = {"logits": logits}
 
@@ -139,6 +165,11 @@ class DependencyParser(models.Model):
 
         """
         # TODO(Students) Start
+
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels))
+
+        regularization = (tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.B1) + tf.nn.l2_loss(self.W2))
+        regularization = self._regularization_lambda * regularization
 
         # TODO(Students) End
         return loss + regularization
