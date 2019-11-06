@@ -86,20 +86,16 @@ class DependencyParser(models.Model):
         # Trainable Variables
         # TODO(Students) Start
 
-        w_init = tf.random_normal_initializer()
-        self.embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim), dtype='float32'),
+        w_init = tf.initializers.TruncatedNormal()
+        self.embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim)),
                                       trainable=trainable_embeddings)
-        self.pos_embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim), dtype='float32'),
-                                          trainable=trainable_embeddings)
-        self.label_embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim), dtype='float32'),
-                                            trainable=trainable_embeddings)
-        self.W1 = tf.Variable(initial_value=w_init(shape=(hidden_dim, embedding_dim * num_tokens), dtype='float32'),
+        self.W1 = tf.Variable(initial_value=w_init(shape=(hidden_dim, embedding_dim * num_tokens)),
                               trainable=trainable_embeddings)
-        self.W2 = tf.Variable(initial_value=w_init(shape=(num_transitions, hidden_dim), dtype='float32'),
+        self.W2 = tf.Variable(initial_value=w_init(shape=(num_transitions, hidden_dim)),
                               trainable=trainable_embeddings)
+
         b_init = tf.zeros_initializer()
-        self.B1 = tf.Variable(initial_value=b_init(shape=(hidden_dim,), dtype='float32'),
-                              trainable=trainable_embeddings)
+        self.B1 = tf.Variable(initial_value=b_init(shape=(hidden_dim,)), trainable=trainable_embeddings)
 
         # TODO(Students) End
 
@@ -134,7 +130,10 @@ class DependencyParser(models.Model):
         """
         # TODO(Students) Start
 
-        input_embed = tf.nn.embedding_lookup()
+        batch_size, num_tokens = inputs.shape
+
+        input_embed = tf.nn.embedding_lookup(self.embeddings, inputs)
+        input_embed = tf.reshape(input_embed, [batch_size, -1])
 
         h = tf.matmul(input_embed, self.W1, transpose_b=True) + self.B1
 
@@ -166,9 +165,20 @@ class DependencyParser(models.Model):
         """
         # TODO(Students) Start
 
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels))
+        # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels))
+        # p = tf.nn.softmax(logits)
 
-        regularization = (tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.B1) + tf.nn.l2_loss(self.W2))
+        def stable_softmax(x: tf.Tensor) -> tf.Tensor:
+            z = x - tf.reduce_max(x, axis=1, keepdims=True)
+            numerator = tf.exp(z)
+            denominator = tf.reduce_sum(numerator, axis=1, keepdims=True)
+            return numerator / denominator
+
+        p = stable_softmax(logits)
+        loss = tf.reduce_mean(-tf.reduce_sum(labels * tf.math.log(p), axis=1))
+
+        regularization = (tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.B1) + tf.nn.l2_loss(self.W2)
+                          + tf.nn.l2_loss(self.embeddings))
         regularization = self._regularization_lambda * regularization
 
         # TODO(Students) End
