@@ -165,17 +165,23 @@ class DependencyParser(models.Model):
         """
         # TODO(Students) Start
 
-        # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels))
-        # p = tf.nn.softmax(logits)
-
         def stable_softmax(x: tf.Tensor) -> tf.Tensor:
             z = x - tf.reduce_max(x, axis=1, keepdims=True)
             numerator = tf.exp(z)
             denominator = tf.reduce_sum(numerator, axis=1, keepdims=True)
-            return numerator / denominator
+            return tf.math.divide_no_nan(numerator, denominator)
 
-        p = stable_softmax(logits)
-        loss = tf.reduce_mean(-tf.reduce_sum(labels * tf.math.log(p), axis=1))
+        mask = labels != -1
+        mask = tf.cast(mask, dtype='float32')
+
+        y_pred = logits * mask
+        y = labels * mask
+
+        # p = tf.nn.softmax(logits)
+        # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_pred, labels=y))
+
+        p = stable_softmax(y_pred)
+        loss = tf.reduce_mean(-tf.reduce_sum(y * tf.math.log(tf.clip_by_value(p, 1e-10, 1.0)), axis=1))
 
         regularization = (tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.B1) + tf.nn.l2_loss(self.W2)
                           + tf.nn.l2_loss(self.embeddings))
