@@ -125,41 +125,52 @@ def get_configuration_features(configuration: Configuration,
     """
     # TODO(Students) Start
 
-    features = []
-    pos_features = []
-    label_features = []
+    features = []  # Store list of all features (initially only word features)
+    pos_features = []  # Store list of pos tag features
+    label_features = []  # Store list of label features
 
-    top3Stack = [configuration.get_stack(i) for i in range(3)]
-    top3Buffer = [configuration.get_buffer(i) for i in range(3)]
+    top3Stack = [configuration.get_stack(i) for i in range(3)]  # top 3 elements of stack
+    top3Buffer = [configuration.get_buffer(i) for i in range(3)]  # top 3 elements of buffer
 
-    for token_index in top3Stack + top3Buffer:
+    for token_index in top3Stack + top3Buffer:  # Iterate over top 3 words in stack and top 3 words in buffer
+        # Add word to the features
         features.append(vocabulary.get_word_id(configuration.get_word(token_index)))
+        # Add pos tag of corresponding word to the pos_features
         pos_features.append(vocabulary.get_pos_id(configuration.get_pos(token_index)))
 
-    for token_index in top3Stack[:2]:
+    for token_index in top3Stack[:2]:  # Iterate over top 2 words in stack
+        # Iterate over 1 and 2 to get 1st leftmost, 1st rightmost, 2nd leftmost and 2nd rightmost child
+        # of corresponding word in stack.
         for i in range(1, 3):
-            ith_left_child = configuration.get_left_child(token_index, i)
+            ith_left_child = configuration.get_left_child(token_index, i)  # Get ith_leftmost_child of word in stack
+            # Add child to the features
             features.append(vocabulary.get_word_id(configuration.get_word(ith_left_child)))
+            # Add pos tag of corresponding child to the pos_features
             pos_features.append(vocabulary.get_pos_id(configuration.get_pos(ith_left_child)))
+            # Add label of corresponding child to the label_features
             label_features.append(vocabulary.get_label_id(configuration.get_label(ith_left_child)))
 
+            # Similarly for rightmost child add child word, pos tag and label to respective features list
             ith_right_child = configuration.get_right_child(token_index, i)
             features.append(vocabulary.get_word_id(configuration.get_word(ith_right_child)))
             pos_features.append(vocabulary.get_pos_id(configuration.get_pos(ith_right_child)))
             label_features.append(vocabulary.get_label_id(configuration.get_label(ith_right_child)))
 
-    for token_index in top3Stack[:2]:
+    for token_index in top3Stack[:2]:  # Iterate over top 2 words in stack
+        # Get leftmost child of leftmost child of word in stack
         left_left_child = configuration.get_left_child(configuration.get_left_child(token_index, 1), 1)
+        # Add the corresponding child word, pos tag and label to respective features list
         features.append(vocabulary.get_word_id(configuration.get_word(left_left_child)))
         pos_features.append(vocabulary.get_pos_id(configuration.get_pos(left_left_child)))
         label_features.append(vocabulary.get_label_id(configuration.get_label(left_left_child)))
 
+        # Similarly for rightmost child of rightmost child add child word, pos tag and label to respective features list
         right_right_child = configuration.get_right_child(configuration.get_right_child(token_index, 1), 1)
         features.append(vocabulary.get_word_id(configuration.get_word(right_right_child)))
         pos_features.append(vocabulary.get_pos_id(configuration.get_pos(right_right_child)))
         label_features.append(vocabulary.get_label_id(configuration.get_label(right_right_child)))
 
-    features += pos_features + label_features
+    features += pos_features + label_features  # Append the pos and label features to the word features
 
     # TODO(Students) End
 

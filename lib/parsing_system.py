@@ -105,16 +105,20 @@ class ParsingSystem:
         # TODO(Students) Start
 
         top_stack, second_top_stack = configuration.get_stack(0), configuration.get_stack(1)
-        label = transition[2:-1]
+        label = transition[2:-1]  # Get the label for the transition
 
-        if transition.startswith("L"):
+        if transition.startswith("L"):  # If transition is left-arc
+            # Create an arc from word on top_stack to word on second_top_stack
             configuration.add_arc(top_stack, second_top_stack, label)
+            # Remove word at second position from top of stack
             configuration.remove_second_top_stack()
-        elif transition.startswith("R"):
+        elif transition.startswith("R"):  # If transition is right-arc
+            # Create an arc from word on second_top_stack to word on top_stack
             configuration.add_arc(second_top_stack, top_stack, label)
+            # Remove word at top of stack
             configuration.remove_top_stack()
-        else:
-            configuration.shift()
+        else:  # If transition is shift
+            configuration.shift()  # Perform shift operation
 
         return configuration
 

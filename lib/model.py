@@ -26,6 +26,7 @@ class CubicActivation(layers.Layer):
         # Comment the next line after implementing call.
         # raise NotImplementedError
 
+        # Calculate the cubic activation function as x^3
         return tf.math.pow(vector, 3)
 
         # TODO(Students) End
@@ -86,16 +87,18 @@ class DependencyParser(models.Model):
         # Trainable Variables
         # TODO(Students) Start
 
+        # TruncatedNormal initializer for initializing weights
         w_init = tf.initializers.TruncatedNormal()
+        # Initialize the word-pos-label embeddings, and weights of hidden and output state of the model
         self.embeddings = tf.Variable(initial_value=w_init(shape=(vocab_size, embedding_dim)),
                                       trainable=trainable_embeddings)
-        self.W1 = tf.Variable(initial_value=w_init(shape=(hidden_dim, embedding_dim * num_tokens)),
-                              trainable=trainable_embeddings)
-        self.W2 = tf.Variable(initial_value=w_init(shape=(num_transitions, hidden_dim)),
-                              trainable=trainable_embeddings)
+        self.W1 = tf.Variable(initial_value=w_init(shape=(hidden_dim, embedding_dim * num_tokens)))
+        self.W2 = tf.Variable(initial_value=w_init(shape=(num_transitions, hidden_dim)))
 
+        # Zeros initializer for initializing bias
         b_init = tf.zeros_initializer()
-        self.B1 = tf.Variable(initial_value=b_init(shape=(hidden_dim,)), trainable=trainable_embeddings)
+        # Initialize the bias vector for the hidden state
+        self.B1 = tf.Variable(initial_value=b_init(shape=(hidden_dim,)))
 
         # TODO(Students) End
 
@@ -130,16 +133,19 @@ class DependencyParser(models.Model):
         """
         # TODO(Students) Start
 
+        # Get the batch_size and num_tokens from inputs
         batch_size, num_tokens = inputs.shape
 
+        # Get the embeddings for the inputs
         input_embed = tf.nn.embedding_lookup(self.embeddings, inputs)
+        # Reshape the embeddings to flatten it out
         input_embed = tf.reshape(input_embed, [batch_size, -1])
 
-        h = tf.matmul(input_embed, self.W1, transpose_b=True) + self.B1
+        h = tf.matmul(input_embed, self.W1, transpose_b=True) + self.B1  # Calculate the output of the hidden layer h
 
-        h = self._activation(h)
+        h = self._activation(h)  # Apply the activation function
 
-        logits = tf.matmul(h, self.W2, transpose_b=True)
+        logits = tf.matmul(h, self.W2, transpose_b=True)  # Calculate the output of the output layer
 
         # TODO(Students) End
         output_dict = {"logits": logits}
@@ -166,26 +172,41 @@ class DependencyParser(models.Model):
         # TODO(Students) Start
 
         def stable_softmax(x: tf.Tensor) -> tf.Tensor:
+            """
+            Implementation of the stable softmax function. This method computes the numerically stable softmax
+            value for the input tensor x.
+            :param x: logits whose softmax is to be computed
+            :return: softmax tensor of the input x
+            """
+            # Subtract the max(x) from x to avoid overflow
             z = x - tf.reduce_max(x, axis=1, keepdims=True)
+            # Compute the numerator of softmax function as e^z
             numerator = tf.exp(z)
+            # Compute the denominator of softmax function as sum(e^z)
             denominator = tf.reduce_sum(numerator, axis=1, keepdims=True)
+            # Return division e^z / sum(e^z)
             return tf.math.divide_no_nan(numerator, denominator)
 
+        # Create a mask to remove the infeasible transitions denoted by -1 in labels
         mask = labels != -1
         mask = tf.cast(mask, dtype='float32')
 
+        # Apply the mask to the logits and the labels
         y_pred = logits * mask
         y = labels * mask
 
-        # p = tf.nn.softmax(logits)
-        # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=y_pred, labels=y))
-
+        # Get the softmax of the logits
         p = stable_softmax(y_pred)
-        loss = tf.reduce_mean(-tf.reduce_sum(y * tf.math.log(tf.clip_by_value(p, 1e-10, 1.0)), axis=1))
+        # Set min value to a noise to avoid log(0) NaN
+        p = tf.clip_by_value(p, 1e-10, 1.0)
+        # Compute the cross entropy loss
+        loss = tf.reduce_mean(-tf.reduce_sum(y * tf.math.log(p), axis=1))
 
+        # Compute the regularization as the sum of l2_norm of all the trainable variables of the model
         regularization = (tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.B1) + tf.nn.l2_loss(self.W2)
                           + tf.nn.l2_loss(self.embeddings))
-        regularization = self._regularization_lambda * regularization
+        # Multiply the regularization by the regularization lambda
+        regularization = (self._regularization_lambda / 2) * regularization
 
         # TODO(Students) End
         return loss + regularization
