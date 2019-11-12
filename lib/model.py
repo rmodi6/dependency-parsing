@@ -203,10 +203,9 @@ class DependencyParser(models.Model):
         loss = tf.reduce_mean(-tf.reduce_sum(y * tf.math.log(p), axis=1))
 
         # Compute the regularization as the sum of l2_norm of all the trainable variables of the model
-        regularization = (tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.B1) + tf.nn.l2_loss(self.W2)
-                          + tf.nn.l2_loss(self.embeddings))
+        regularization = tf.add_n([tf.nn.l2_loss(variable) for variable in self.trainable_variables])
         # Multiply the regularization by the regularization lambda
-        regularization = (self._regularization_lambda / 2) * regularization
+        regularization = self._regularization_lambda * regularization
 
         # TODO(Students) End
         return loss + regularization
